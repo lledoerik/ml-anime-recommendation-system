@@ -47,7 +47,7 @@ document.getElementById('starRating').addEventListener('mouseleave', () => {
 function updateRating(rating) {
     currentRating = rating;
     ratingInput.value = rating;
-    ratingValue.textContent = `${rating}/10`;
+    ratingValue.textContent = `${rating}/5`;
     highlightStars(rating);
 }
 
@@ -74,6 +74,9 @@ const animeGrid = document.getElementById('animeGrid');
 const loadingIndicator = document.getElementById('loadingIndicator');
 const resultsCount = document.getElementById('resultsCount');
 
+// URL de la API (canvia-la si és necessari)
+const API_URL = 'http://localhost:5000';
+
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -94,10 +97,8 @@ form.addEventListener('submit', async (e) => {
     resultsSection.scrollIntoView({behavior: 'smooth'});
 
     try {
-        // AQUÍ HAS DE CRIDAR A LA TEVA API DE FLASK
-        // Exemple de crida fetch:
-        /*
-        const response = await fetch('/api/recommendations', {
+        // Crida a l'API de Flask
+        const response = await fetch(`${API_URL}/api/recommendations`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -109,31 +110,41 @@ form.addEventListener('submit', async (e) => {
         });
 
         if (!response.ok) {
-            throw new Error('Error en obtenir recomanacions');
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Error en obtenir recomanacions');
         }
 
         const data = await response.json();
-        displayResults(data.recommendations);
-        */
-
-        // DADES DE PROVA
-        setTimeout(() => {
-            const mockData = generateMockRecommendations(animeName, rating);
-            displayResults(mockData);
-        }, 1500);
+        displayResults(data.recommendations, animeName, rating);
 
     } catch (error) {
         console.error('Error:', error);
         loadingIndicator.classList.add('hidden');
-        animeGrid.innerHTML = '<div class="error-message">Error en obtenir les recomanacions. Si us plau, torna-ho a intentar.</div>';
+
+        let errorMessage = 'Error en obtenir les recomanacions.';
+
+        if (error.message.includes("No s'ha trobat")) {
+            errorMessage = `No s'ha trobat l'anime "${animeName}". Si us plau, prova amb un altre nom.`;
+        } else if (error.message.includes('Failed to fetch')) {
+            errorMessage = 'No es pot connectar amb el servidor. Assegura\'t que l\'API Flask està en funcionament.';
+        } else {
+            errorMessage = error.message;
+        }
+
+        animeGrid.innerHTML = `<div class="error-message">${errorMessage}</div>`;
     }
 });
 
-function displayResults(recommendations) {
+function displayResults(recommendations, animeName, rating) {
     loadingIndicator.classList.add('hidden');
     animeGrid.innerHTML = '';
 
-    resultsCount.textContent = `${recommendations.length} animes trobats`;
+    if (!recommendations || recommendations.length === 0) {
+        animeGrid.innerHTML = '<div class="error-message">No s\'han trobat recomanacions.</div>';
+        return;
+    }
+
+    resultsCount.textContent = `${recommendations.length} animes recomanats basats en "${animeName}" (valoració: ${rating}/5)`;
 
     recommendations.forEach(anime => {
         const card = createAnimeCard(anime);
@@ -145,31 +156,62 @@ function createAnimeCard(anime) {
     const card = document.createElement('div');
     card.className = 'anime-card';
 
+    // Calcular color de correlació
+    const correlationPercent = anime.correlation * 100;
+    let correlationColor = '#10b981'; // verd
+    if (correlationPercent < 50) {
+        correlationColor = '#ef4444'; // vermell
+    } else if (correlationPercent < 70) {
+        correlationColor = '#f59e0b'; // taronja
+    }
+
     card.innerHTML = `
-                <div class="anime-title">${anime.title}</div>
-                <div class="anime-info">
-                    <div class="anime-score">
-                        ★ ${anime.score.toFixed(1)}
-                    </div>
-                    ${anime.genre ? `<div>Gènere: ${anime.genre}</div>` : ''}
-                    ${anime.year ? `<div>Any: ${anime.year}</div>` : ''}
-                    ${anime.correlation ? `<div>Correlació: ${(anime.correlation * 100).toFixed(0)}%</div>` : ''}
-                </div>
-            `;
+        <div class="anime-title">${anime.title}</div>
+        <div class="anime-info">
+            <div class="anime-score">
+                ★ ${anime.score}
+            </div>
+            ${anime.genre ? `<div>Gènere: ${anime.genre}</div>` : ''}
+            ${anime.year ? `<div>Any: ${anime.year}</div>` : ''}
+            ${anime.correlation !== undefined ? 
+                `<div style="color: ${correlationColor}; font-weight: 600;">
+                    Similitud: ${(anime.correlation * 100).toFixed(0)}%
+                </div>` : ''}
+        </div>
+    `;
 
     return card;
 }
 
-// FUNCIÓ DE DADES DE PROVA
-function generateMockRecommendations(searchTerm, rating) {
-    const mockAnimes = [
-        {title: 'Steins;Gate', score: 9.1, genre: 'Sci-Fi, Thriller', year: 2011, correlation: 0.89},
-        {title: 'Psycho-Pass', score: 8.7, genre: 'Thriller, Sci-Fi', year: 2012, correlation: 0.85},
-        {title: 'Elfen Lied', score: 7.8, genre: 'Horror, Action', year: 2014, correlation: 0.72},
-        {title: 'Monster', score: 8.9, genre: 'Mystery, Drama', year: 2004, correlation: 0.80},
-        {title: 'Parasyte', score: 8.3, genre: 'Horror, Sci-Fi', year: 2014, correlation: 0.78},
-        {title: 'Erased', score: 8.5, genre: 'Mystery, Thriller', year: 2016, correlation: 0.75},
-    ];
-
-    return mockAnimes.slice(0, 6);
+// Funció per carregar tots els animes disponibles (opcional)
+async function loadAvailableAnimes() {
+    try {
+        const response = await fetch(`${API_URL}/api/animes`);
+        const data = await response.json();
+        return data.animes;
+    } catch (error) {
+        console.error('Error carregant animes:', error);
+        return [];
+    }
 }
+
+// Autocomplete opcional (pots descomentar si vols implementar-ho)
+/*
+const animeSearchInput = document.getElementById('animeSearch');
+let availableAnimes = [];
+
+loadAvailableAnimes().then(animes => {
+    availableAnimes = animes;
+});
+
+animeSearchInput.addEventListener('input', (e) => {
+    const query = e.target.value.toLowerCase();
+    if (query.length > 2) {
+        const suggestions = availableAnimes.filter(anime =>
+            anime.name.toLowerCase().includes(query)
+        ).slice(0, 5);
+        // Aquí pots mostrar les suggerències
+        console.log('Suggerències:', suggestions);
+    }
+});
+*/
