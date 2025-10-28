@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 
 class RecommendationSystem:
-    def __init__(self, anime_csv_path='data/anime.csv', rating_csv_path='data/rating_balanceado.csv'):
+    def __init__(self, anime_csv_path='data/anime.csv', rating_csv_path='data/cleaned_data.csv'):
         """
         Inicialitza el sistema de recomanacions carregant les dades dels CSV
         """
@@ -29,7 +29,7 @@ class RecommendationSystem:
         a_cols = ['anime_id', 'name', 'genre', 'members']
         animes_df = pd.read_csv(anime_csv_path, sep=',', usecols=a_cols, encoding="ISO-8859-1")
         
-        # Llegir rating_balanceado.csv (o rating.csv si no tens el balancejat)
+        # Llegir cleaned_data.csv (o rating.csv si no tens el balancejat)
         ratings_df = pd.read_csv(rating_csv_path, sep=',', encoding="ISO-8859-1")
         
         # Merge de les dades

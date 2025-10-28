@@ -195,8 +195,8 @@ async function loadAvailableAnimes() {
     }
 }
 
-// Autocomplete opcional (pots descomentar si vols implementar-ho)
-/*
+// Autocompletat
+
 const animeSearchInput = document.getElementById('animeSearch');
 let availableAnimes = [];
 
@@ -214,4 +214,3 @@ animeSearchInput.addEventListener('input', (e) => {
         console.log('Suggerències:', suggestions);
     }
 });
-*/

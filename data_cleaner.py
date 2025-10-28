@@ -8,7 +8,7 @@ Segueix la lògica del notebook Anime.ipynb per netejar les dades
 import pandas as pd
 import os
 
-def preprocess_ratings(input_file='rating.csv', output_file='rating_balanceado.csv'):
+def preprocess_ratings(input_file='rating.csv', output_file='cleaned_data.csv'):
     """
     Neteja el fitxer de valoracions seguint aquests passos:
     1. Eliminar valoracions -1 (usuaris que van veure però no valorar)
@@ -192,9 +192,9 @@ if __name__ == "__main__":
     else:
         # Mode preprocessament per defecte
         print("Opcions:")
-        print("  1. Preprocessar rating.csv → rating_balanceado.csv")
+        print("  1. Preprocessar rating.csv → cleaned_data.csv")
         print("  2. Analitzar rating.csv")
-        print("  3. Analitzar rating_balanceado.csv")
+        print("  3. Analitzar cleaned_data.csv")
         print("  4. Sortir")
         
         choice = input("\nSelecciona una opció (1-4): ").strip()
@@ -204,7 +204,7 @@ if __name__ == "__main__":
         elif choice == '2':
             analyze_dataset('rating.csv')
         elif choice == '3':
-            analyze_dataset('rating_balanceado.csv')
+            analyze_dataset('cleaned_data.csv')
         elif choice == '4':
             print("Sortint...")
         else:
