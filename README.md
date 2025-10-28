@@ -28,7 +28,7 @@ project/
 │   ├── anime.csv                    # Dataset d'animes
 │   └── rating_balanceado.csv        # Dataset de valoracions (net)
 ├── model/                           # Models entrenats (es crea automàticament)
-│   └── corr_matrix_v1.pkl           # Model entrenat
+│   └── corr_matrix_v1.pkl          # Model entrenat
 ├── static/
 │   ├── style.css
 │   └── script.js
@@ -46,18 +46,20 @@ project/
 
 ## 🔄 Flux de Treball
 
-### **Pas 1: Netejar les Dades**
+### **Pas 1: Netejar les Dades (Opcional)**
+
+Si tens el fitxer `rating.csv` original (amb valoracions -1):
 
 ```bash
 python data_cleaner.py
 ```
 
-Això generarà `cleaned_data.csv` amb:
+Això generarà `cleaned_data.csv` o `rating_balanceado.csv` amb:
+- Sense valoracions -1
 - Usuaris amb mínim 100 valoracions
 - Animes amb mínim 50 valoracions
-- Sense valoracions -1
 
-### **Pas 2: Entrenar el Model**
+### **Pas 2: Entrenar el Model** ⚠️ **OBLIGATORI LA PRIMERA VEGADA**
 
 ```bash
 python train_model.py
