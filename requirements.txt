@@ -1,0 +1,13 @@
+# Flask i extensions
+flask==3.0.0
+flask-cors==4.0.0
+
+# Data processing i ML
+pandas==2.1.3
+numpy==1.26.2
+
+# Scheduler per tasques automàtiques
+APScheduler==3.10.4
+
+# CORS
+Werkzeug==3.0.1
