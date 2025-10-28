@@ -25,6 +25,7 @@ app = Flask(__name__,
             template_folder='templates')
 CORS(app)
 app.config["DEBUG"] = True
+app.config["PORT"] = 80
 
 # Configuració de rutes
 DATA_DIR = Path(__file__).resolve().parent / 'data'
