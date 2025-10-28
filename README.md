@@ -1,75 +1,83 @@
 # 🎬 Sistema de Recomanacions d'Animes
 
-Sistema intel·ligent de recomanacions basat en collaborative filtering amb correlació de Pearson.
+Sistema intel·ligent de recomanacions basat en collaborative filtering amb correlació de Pearson. Inclou entrenament automàtic del model cada dia a les 2:30 AM.
 
-## 📋 Índex
+## 📋 Característiques
 
-1. [Instal·lació](#instal·lació)
-2. [Estructura del Projecte](#estructura-del-projecte)
-3. [Flux de Treball](#flux-de-treball)
-4. [Entrenament del Model](#entrenament-del-model)
-5. [Executar l'Aplicació](#executar-l'aplicació)
-6. [API Endpoints](#api-endpoints)
-7. [Resolució de Problemes](#resolució-de-problemes)
-
----
+✅ **Recomanacions intel·ligents** basades en correlació de Pearson
+✅ **Entrenament automàtic** del model cada dia a les 2:30 AM
+✅ **Sistema de versionat** de models (v1, v2, v3...)
+✅ **Footer informatiu** amb versió del model en temps real
+✅ **Càrrega ràpida** (2-3 segons vs 20 minuts!)
+✅ **Entrenament en background** sense bloquejar l'aplicació
+✅ **API REST** completa amb Flask
+✅ **Interfície web** moderna i responsive
 
 ## 🚀 Instal·lació
 
 ### 1. Requisits
 ```bash
-pip install flask flask-cors pandas numpy
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+pip install -r requirements.txt
 ```
 
 ### 2. Estructura de Directoris
 ```
-project/
-├── data/
-│   ├── anime.csv                    # Dataset d'animes
-│   └── rating_balanceado.csv        # Dataset de valoracions (net)
-├── model/                           # Models entrenats (es crea automàticament)
-│   └── corr_matrix_v1.pkl          # Model entrenat
-├── static/
-│   ├── style.css
-│   └── script.js
-├── templates/
-│   └── index.html
-├── anime.py                         # Classe Anime
-├── user.py                          # Classe User
-├── recommendation_system.py         # Sistema principal
-├── app.py                           # API Flask
-├── train_model.py                   # Script d'entrenament
-└── data_cleaner.py                  # Script de neteja de dades
+ml-anime-recommendation-system/
+├── README.md
+├── requirements.txt
+├── .gitignore
+├── app.py                        # Punt d'entrada de l'aplicació
+│
+├── data/                         # Datasets
+│   ├── anime.csv
+│   └── rating_balanceado.csv
+│
+├── model/                        # Models entrenats (PKL)
+│   ├── corr_matrix_v1.pkl
+│   ├── corr_matrix_v2.pkl
+│   └── ...
+│
+├── src/                          # Codi font principal
+│   ├── __init__.py
+│   ├── models/                   # Classes de dades
+│   │   ├── __init__.py
+│   │   ├── anime.py
+│   │   └── user.py
+│   └── recommendation_system.py  # Motor de recomanacions
+│
+├── scripts/                      # Scripts d'utilitat
+│   ├── train_model.py            # Entrenar model
+│   ├── train_auto.sh             # Script bash simplificat
+│   └── data_cleaner.py           # Netejar dades
+│
+├── static/                       # Frontend
+│   ├── css/
+│   │   └── style.css
+│   └── js/
+│       └── script.js
+│
+└── templates/                    # HTML templates
+    └── index.html
 ```
-
----
 
 ## 🔄 Flux de Treball
 
-### **Pas 1: Netejar les Dades (Opcional)**
-
-Si tens el fitxer `rating.csv` original (amb valoracions -1):
-
+### Pas 1: Netejar les Dades (Opcional)
+Si tens el fitxer `rating.csv` original:
 ```bash
-python data_cleaner.py
+python scripts/data_cleaner.py
 ```
 
-Això generarà `cleaned_data.csv` o `rating_balanceado.csv` amb:
-- Sense valoracions -1
-- Usuaris amb mínim 100 valoracions
-- Animes amb mínim 50 valoracions
-
-### **Pas 2: Entrenar el Model** ⚠️ **OBLIGATORI LA PRIMERA VEGADA**
-
+### Pas 2: Entrenar el Model ⚠️ OBLIGATORI LA PRIMERA VEGADA
 ```bash
-python train_model.py
-```
+# Opció 1: Script Python
+python scripts/train_model.py
 
-**Què fa aquest script?**
-- Carrega les dades dels CSV
-- Crea la pivot table (usuaris × animes)
-- Calcula la matriu de correlacions de Pearson
-- Guarda tot en un fitxer PKL versionat
+# Opció 2: Script bash simplificat
+./scripts/train_auto.sh
+```
 
 **Output:**
 ```
@@ -77,246 +85,201 @@ python train_model.py
    Mida del fitxer: 45.3 MB
 ```
 
-⏱️ **Temps estimat:** 2-10 minuts segons la mida del dataset
+⏱️ **Temps estimat:** 5-10 minuts segons la mida del dataset
 
-### **Pas 3: Executar l'Aplicació**
-
+### Pas 3: Executar l'Aplicació
 ```bash
 python app.py
 ```
 
 Accedeix a: `http://localhost:5000`
 
----
+## 🤖 Entrenament Automàtic
 
-## 🎯 Entrenament del Model
+L'aplicació **comprova automàticament** cada dia a les **2:30 AM** si les dades han canviat.
 
-### Opcions del Script
+**Funcionament:**
+1. 🕐 A les 2:30 AM, l'scheduler es desperta
+2. 🔍 Comprova si `anime.csv` o `rating_balanceado.csv` han canviat
+3. 🚫 Si no han canviat → No fa res
+4. ✅ Si han canviat → Entrena un model nou en **background**
+5. 🔄 Quan acaba, **recarrega automàticament** el model nou
+6. 👥 Els usuaris **no noten res** - segueixen usant el model anterior durant l'entrenament
 
-```bash
-# Entrenar nou model (opció interactiva)
-python train_model.py
-
-# Llistar models disponibles
-python train_model.py --list
-```
-
-### Versionat Automàtic
-
-Cada cop que entrenes el model, es crea una nova versió:
-- Primera vegada: `corr_matrix_v1.pkl`
-- Segona vegada: `corr_matrix_v2.pkl`
-- I així successivament...
-
-L'aplicació **sempre carrega l'última versió** automàticament.
-
-### Quan Reentrenar?
-
-Reentrena el model quan:
-- Afegeixes noves dades al CSV
-- Canvies els paràmetres de filtratge
-- Vols experimentar amb diferents configuracions
-
----
+**Avantatges:**
+- ✅ **Zero downtime:** L'app no es para mai
+- ✅ **Transparent:** Els usuaris no ho noten
+- ✅ **Automàtic:** No cal intervenció manual
+- ✅ **Versionat:** Es guarda cada versió (v1, v2, v3...)
 
 ## 🌐 API Endpoints
 
-### 1. **Obtenir Recomanacions d'un Anime**
-
-**POST** `/api/recommendations`
-
-```json
+### 1. Obtenir Recomanacions
+```bash
+POST /api/recommendations
 {
   "anime": "Death Note",
   "rating": 4.5
 }
 ```
 
-**Response:**
-```json
-{
-  "anime": "Death Note",
-  "user_rating": 4.5,
-  "recommendations": [
-    {
-      "title": "Code Geass",
-      "score": 8.7,
-      "genre": "Action, Drama",
-      "year": null,
-      "correlation": 0.87
-    },
-    ...
-  ]
-}
-```
-
-### 2. **Recomanacions per Múltiples Animes**
-
-**POST** `/api/recommendations-multiple`
-
-```json
+### 2. Recomanacions Múltiples
+```bash
+POST /api/recommendations-multiple
 {
   "ratings": {
     "Death Note": 5,
-    "Code Geass": 4.5,
-    "Steins;Gate": 5
+    "Code Geass": 4.5
   }
 }
 ```
 
-### 3. **Llistar Tots els Animes**
+### 3. Informació del Model ⭐ NOU
+```bash
+GET /api/model-info
 
-**GET** `/api/animes`
-
-### 4. **Cercar Anime**
-
-**GET** `/api/search?q=death`
-
-### 5. **Llistar Models Disponibles**
-
-**GET** `/api/models`
-
----
-
-## ⚙️ Funcionament Intern
-
-### Sistema de Càrrega
-
-```python
-# 1. L'app.py intenta carregar el model
-rec_system = RecommendationSystem(...)
-
-# 2. RecommendationSystem busca l'última versió
-latest_version = _get_latest_version()  # Troba v3 si existeix
-
-# 3. Carrega el PKL
-model_data = pickle.load('model/corr_matrix_v3.pkl')
-
-# 4. Restaura totes les estructures
-self.corrMatrix = model_data['corrMatrix']
-self.userRatings_pivot = model_data['userRatings_pivot']
-self.animeStats = model_data['animeStats']
-# ...
+Response:
+{
+  "version": 3,
+  "loaded_at": "2024-10-28T12:30:45",
+  "num_animes": 12294,
+  "num_users": 73516,
+  "num_ratings": 2156789,
+  "data_changed": false,
+  "training_in_progress": false
+}
 ```
 
-### Avantatges
+### 4. Altres Endpoints
+```bash
+GET  /api/animes              # Llistar tots els animes
+GET  /api/search?q=death      # Cercar animes
+GET  /api/models              # Llistar models disponibles
+POST /api/train               # Forçar entrenament manual
+```
 
-✅ **Rapidesa:** Càrrega en segons vs minuts
-✅ **Versionat:** Historial de models
-✅ **Consistència:** Mateixa matriu de correlacions sempre
-✅ **Fiabilitat:** Sense JSON serialization errors
+## 📊 Footer amb Informació del Model
 
----
+El footer mostra en temps real:
+- 📦 **Versió del model** actual (v1, v2, v3...)
+- 🎬 **Nombre d'animes** en el model
+- 👥 **Nombre d'usuaris** en el model
+- 📅 **Data de càrrega** del model
+- 🔄 **Indicador d'entrenament** si s'està entrenant
+
+**El footer s'actualitza automàticament cada 30 segons!**
+
+## ⚙️ Com Funciona el Sistema
+
+### 1. Càrrega Ràpida
+```python
+# En lloc de calcular cada vegada (20 minuts):
+corrMatrix = userRatings_pivot.corr(...)  # ❌ Lent
+
+# Carreguem del PKL (2-3 segons):
+model_data = pickle.load('model/corr_matrix_v3.pkl')  # ✅ Ràpid
+```
+
+### 2. Versionat Automàtic
+```
+Primera vegada: corr_matrix_v1.pkl
+Segona vegada:  corr_matrix_v2.pkl
+Tercera vegada: corr_matrix_v3.pkl
+...
+```
+
+L'app **sempre carrega l'última versió** automàticament.
+
+### 3. Scheduler Automàtic
+```python
+# APScheduler executa check_and_retrain() cada dia a les 2:30 AM
+scheduler.add_job(
+    func=check_and_retrain,
+    trigger=CronTrigger(hour=2, minute=30),
+    id='daily_model_check'
+)
+```
+
+### 4. Entrenament en Background
+```python
+# Threading per no bloquejar l'app
+training_thread = threading.Thread(target=train_model_background)
+training_thread.daemon = True
+training_thread.start()
+
+# Els usuaris segueixen usant model v3
+# Mentre en background s'entrena v4
+# Quan v4 està llest → switch automàtic
+```
 
 ## 🛠️ Resolució de Problemes
 
 ### Error: "No s'ha trobat cap model entrenat"
-
-**Causa:** El directori `model/` està buit
-
-**Solució:**
 ```bash
-python train_model.py
+python scripts/train_model.py
 ```
 
-### Error: "Object of type np.float64 is not JSON serializable"
-
-**Causa:** Aquest error ja està resolt en la nova versió
-
-**Què hem fet:**
-- Convertim tots els valors a tipus Python natius (`float()`, `str()`, `int()`)
-- Abans: `rating = anime_info.get('rating', 0)` → numpy.float64
-- Ara: `rating = float(anime_info.get('rating', 0))` → Python float
-
-### Error: "No s'ha trobat el fitxer anime.csv"
-
-**Solució:**
-1. Assegura't que els CSV estan a `data/anime.csv` i `data/rating_balanceado.csv`
-2. Ajusta les rutes a `app.py` si cal
-
-### L'aplicació triga molt a carregar
-
-**Causa:** Està calculant les correlacions en temps real
-
-**Solució:**
+### L'app triga molt a carregar
+Això vol dir que no tens cap model entrenat!
 ```bash
-# 1. Atura l'app
-Ctrl+C
-
-# 2. Entrena el model
-python train_model.py
-
-# 3. Torna a executar
-python app.py
+python scripts/train_model.py
 ```
 
 ### Vull esborrar models antics
-
 ```bash
-# Veure models disponibles
-python train_model.py --list
-
-# Esborrar manualment
 rm model/corr_matrix_v1.pkl
 rm model/corr_matrix_v2.pkl
+# Mantén només la versió més recent
 ```
 
----
-
-## 📊 Estadístiques del Sistema
-
-Després d'entrenar, veuràs:
-
-```
-✅ MODEL ENTRENAT I GUARDAT CORRECTAMENT!
-======================================================================
-📋 Models disponibles:
-  - v1: 45.3 MB (model/corr_matrix_v1.pkl)
-  - v2: 46.1 MB (model/corr_matrix_v2.pkl)
-  - v3: 45.8 MB (model/corr_matrix_v3.pkl) (ACTUAL)
-
-🚀 Ara pots executar l'aplicació Flask:
-   python app.py
-======================================================================
-```
-
----
-
-## 💡 Consells
-
-1. **Primera Execució:** Sempre entrena el model primer
-2. **Desenvolupament:** Pots reentrenar quan vulguis sense perdre versions antigues
-3. **Producció:** Usa sempre un model entrenat, mai calcular en temps real
-4. **Depuració:** Comprova `model/` per veure quins models tens disponibles
-
----
-
-## 🎓 Conceptes Clau
-
-### Què conté el PKL?
-
+### Canviar l'hora de l'entrenament automàtic
+Edita `app.py`:
 ```python
-model_data = {
-    'animes_dict': {...},          # Diccionari d'objectes Anime
-    'users_dict': {...},           # Diccionari d'objectes User
-    'ratings_df': DataFrame,       # Dataset complet
-    'userRatings_pivot': DataFrame, # Matriu usuaris × animes
-    'corrMatrix': DataFrame,       # Correlacions de Pearson
-    'animeStats': DataFrame,       # Estadístiques per anime
-    'version': 3,                  # Número de versió
-}
+# Canvia aquesta línia:
+trigger = CronTrigger(hour=2, minute=30)
+
+# Per exemple, per executar-lo a les 3:45 AM:
+trigger = CronTrigger(hour=3, minute=45)
 ```
 
-### Per què guardar pivot i stats?
+## 💡 Conceptes Clau
 
-- **userRatings_pivot:** Triga molt a crear (pivot sobre milions de files)
-- **corrMatrix:** Triga molt a calcular (correlacions entre milers d'animes)
-- **animeStats:** Necessari per filtrar animes populars
+### Threading vs Multiprocessing
+**Threading (el que usem):**
+- Múltiples tasques en el mateix procés
+- Comparteixen memòria
+- Més lleuger
+- Ideal per I/O (com entrenar models)
 
-Guardar-ho tot accelera la càrrega **x100** o més! 🚀
+**Multiprocessing:**
+- Múltiples processos independents
+- Memòria separada
+- Més pesant
+- Ideal per CPU-intensive tasks
+
+### Scheduler (APScheduler)
+Permet executar funcions en moments específics:
+- `CronTrigger(hour=2, minute=30)` → Cada dia a les 2:30 AM
+- `IntervalTrigger(hours=24)` → Cada 24 hores des de l'última execució
+
+### Pickle
+Serialitza objectes de Python a fitxers binaris:
+```python
+# Guardar
+pickle.dump(model_data, file)
+
+# Carregar
+model_data = pickle.load(file)
+```
+
+## 📝 Crèdits
+
+Projecte acadèmic de sistema de recomanacions d'animes amb:
+- Flask (API REST)
+- Pandas + NumPy (Data processing)
+- APScheduler (Tasques automàtiques)
+- Collaborative Filtering (Pearson correlation)
 
 ---
 
-## 📝 Llicència
-
-Projecte acadèmic de sistema de recomanacions d'animes.
+**Made with ❤️ i molt de temps esperant que s'entreni el model 😅**
