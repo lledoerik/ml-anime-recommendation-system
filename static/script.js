@@ -194,23 +194,3 @@ async function loadAvailableAnimes() {
         return [];
     }
 }
-
-// Autocompletat
-
-const animeSearchInput = document.getElementById('animeSearch');
-let availableAnimes = [];
-
-loadAvailableAnimes().then(animes => {
-    availableAnimes = animes;
-});
-
-animeSearchInput.addEventListener('input', (e) => {
-    const query = e.target.value.toLowerCase();
-    if (query.length > 2) {
-        const suggestions = availableAnimes.filter(anime =>
-            anime.name.toLowerCase().includes(query)
-        ).slice(0, 5);
-        // Aquí pots mostrar les suggerències
-        console.log('Suggerències:', suggestions);
-    }
-});
