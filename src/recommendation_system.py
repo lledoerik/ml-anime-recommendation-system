@@ -3,7 +3,8 @@ Sistema de Recomanacions d'Animes
 Motor principal amb collaborative filtering i Pearson correlation
 """
 
-from src.models import Anime, User
+from src.models.anime import Anime
+from src.models.user import User
 import pandas as pd
 import numpy as np
 import pickle
