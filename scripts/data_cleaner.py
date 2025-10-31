@@ -5,10 +5,16 @@ Executa aquest script abans d'usar el sistema si tens el CSV original sense proc
 Segueix la lògica del notebook Anime.ipynb per netejar les dades
 """
 
+from pathlib import Path
 import pandas as pd
 import os
 
-def preprocess_ratings(input_file='rating.csv', output_file='cleaned_data.csv'):
+DATA_DIR = Path(__file__).resolve().parent / '../data'
+ANIME_CSV = DATA_DIR / 'anime.csv'
+RATING_CSV = DATA_DIR / 'rating.csv'
+CLEANED_DATA_CSV = DATA_DIR / 'cleaned_data.csv'
+
+def preprocess_ratings(input_file=RATING_CSV, output_file=CLEANED_DATA_CSV):
     """
     Neteja el fitxer de valoracions seguint aquests passos:
     1. Eliminar valoracions -1 (usuaris que van veure però no valorar)
@@ -16,9 +22,9 @@ def preprocess_ratings(input_file='rating.csv', output_file='cleaned_data.csv'):
     3. Filtrar animes amb almenys 50 valoracions
     """
     
-    print("=" * 70)
+    print("=" * 50)
     print("PREPROCESSAMENT DEL DATASET DE VALORACIONS")
-    print("=" * 70)
+    print("=" * 50)
     
     # Verificar que existeix el fitxer d'entrada
     if not os.path.exists(input_file):

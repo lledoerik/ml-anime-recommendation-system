@@ -24,7 +24,7 @@ def train_new_model():
     """
     DATA_DIR = root_dir / 'data'
     ANIME_CSV = DATA_DIR / 'anime.csv'
-    RATING_CSV = DATA_DIR / 'rating_balanceado.csv'
+    RATING_CSV = DATA_DIR / 'cleaned_data.csv'
     
     print("\n" + "="*70)
     print("🎬 ENTRENAMENT DEL MODEL DE RECOMANACIONS D'ANIMES")
