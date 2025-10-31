@@ -14,7 +14,8 @@ from datetime import datetime
 
 
 class RecommendationSystem:
-    def __init__(self, anime_csv_path='data/anime.csv', rating_csv_path='data/rating_balanceado.csv', model_dir='model'):
+
+    def __init__(self, anime_csv_path='data/anime.csv', rating_csv_path='data/cleaned_data.csv', model_dir='model'):
         """
         Inicialitza el sistema de recomanacions carregant el model més recent
         """
@@ -24,7 +25,7 @@ class RecommendationSystem:
         self.userRatings_pivot = None
         self.corrMatrix = None
         self.animeStats = None
-        self.model_dir = Path(model_dir)
+        self.model_dir = Path(__file__).resolve().parent.parent / model_dir
         self.anime_csv_path = Path(anime_csv_path)
         self.rating_csv_path = Path(rating_csv_path)
         
