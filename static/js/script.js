@@ -72,7 +72,7 @@ const loadingIndicator = document.getElementById('loadingIndicator');
 const resultsCount = document.getElementById('resultsCount');
 
 // URL de la API
-const API_URL = 'http://localhost:5000';
+const API_URL = '/api';
 
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
