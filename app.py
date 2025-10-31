@@ -8,6 +8,7 @@ from flask_cors import CORS
 from pathlib import Path
 import threading
 import sys
+import os
 
 # Afegir src/ al path per poder importar
 sys.path.insert(0, str(Path(__file__).parent))
@@ -398,7 +399,12 @@ if __name__ == '__main__':
         print("="*70 + "\n")
         
         try:
-            app.run(debug=True, host='https://recomandor.hermes.cat', use_reloader=False)
+            # Host must be a hostname or IP (no URL scheme). Using a full URL like
+            # 'https://recomandor.hermes.cat' causes getaddrinfo failures.
+            host = os.environ.get('APP_HOST') or os.environ.get('HOST') or '0.0.0.0'
+            port = int(os.environ.get('APP_PORT') or os.environ.get('PORT') or 5000)
+            print(f"Iniciant app: host={host} port={port}")
+            app.run(debug=True, host=host, port=port, use_reloader=False)
         except (KeyboardInterrupt, SystemExit):
             # Aturar el scheduler quan es tanca l'app
             scheduler.shutdown()
