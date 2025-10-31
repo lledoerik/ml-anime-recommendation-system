@@ -398,7 +398,7 @@ if __name__ == '__main__':
         print("="*70 + "\n")
         
         try:
-            app.run(debug=True, host='0.0.0.0', port=5000, use_reloader=False)
+            app.run(debug=True, host='https://recomandor.hermes.cat, use_reloader=False)
         except (KeyboardInterrupt, SystemExit):
             # Aturar el scheduler quan es tanca l'app
             scheduler.shutdown()
