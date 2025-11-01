@@ -2,16 +2,43 @@
 <html lang="ca">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Recomanador d'Animes</title>
-    <link rel="stylesheet" href="../static/css/style.css">
+    <meta name="description" content="Sistema intel·ligent de recomanacions d'animes basat en les teves preferències">
+    <meta name="author" content="Anime Recommender System">
+    
+    <title>Recomanador d'Animes - Descobreix nous animes</title>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="/static/css/style.css">
     <link rel="icon" href="https://i.ibb.co/5gZf2yZf/svg-formatted-logo-for-navi-v0-rkwxximk4s0e1.webp">
+    
+    <!-- Fonts per suportar caràcters japonesos -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <style>
+        /* Inline styles per assegurar UTF-8 */
+        @charset "UTF-8";
+        
+        /* Font stack amb suport japonès */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 
+                         'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 
+                         'Meiryo', 'MS PGothic', 'Yu Gothic', 'YuGothic',
+                         Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <header>
             <h1>🎞 Recomanador d'Animes 🎞</h1>
             <p class="subtitle">Descobreix nous animes basats en les teves preferències</p>
+            <p class="subtitle" style="font-size: 0.9rem; margin-top: 10px; color: #64748b;">
+                💡 Puntua alt els animes que t'agraden per trobar-ne de similars, 
+                o puntua baix per descobrir alternatives diferents!
+            </p>
         </header>
         
         <div class="search-section">
@@ -23,9 +50,11 @@
                             type="text"
                             id="animeSearch"
                             name="animeSearch"
-                            placeholder="Escriu el nom de l'anime..."
+                            placeholder="Escriu el nom de l'anime... (ex: Death Note, One Piece, Attack on Titan)"
                             required
+                            autocomplete="off"
                         >
+                        <div id="searchSuggestions" class="search-suggestions hidden"></div>
                     </div>
                 </div>
 
@@ -42,10 +71,15 @@
                         <span class="rating-value" id="ratingValue">0/5</span>
                     </div>
                     <input type="hidden" id="ratingInput" name="rating" value="0">
+                    <p style="font-size: 0.85rem; color: #64748b; margin-top: 8px;">
+                        ⭐ Alta (4-5): Troba animes similars | 
+                        😐 Mitjana (3): Animes moderats | 
+                        👎 Baixa (1-2): Descobreix alternatives diferents
+                    </p>
                 </div>
 
                 <button type="submit" class="btn" id="submitBtn">
-                    Mostrar Recomanacions
+                    🔍 Mostrar Recomanacions
                 </button>
             </form>
         </div>
@@ -57,7 +91,7 @@
             </div>
 
             <div id="loadingIndicator" class="loading hidden">
-                <p>Carregant recomanacions...</p>
+                <p>🔄 Carregant recomanacions...</p>
             </div>
 
             <div class="anime-grid" id="animeGrid"></div>
@@ -76,6 +110,7 @@
         </div>
     </footer>
     
-    <script src="../static/js/script.js"></script>
+    <!-- JavaScript -->
+    <script src="/static/js/script.js" charset="UTF-8"></script>
 </body>
 </html>

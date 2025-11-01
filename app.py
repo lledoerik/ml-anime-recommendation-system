@@ -9,6 +9,7 @@ from pathlib import Path
 import threading
 import sys
 import os
+import time
 
 # Afegir src/ al path per poder importar
 sys.path.insert(0, str(Path(__file__).parent))
@@ -25,13 +26,13 @@ app = Flask(__name__,
             static_folder='static',
             template_folder='templates')
 CORS(app)
-app.config["DEBUG"] = True
-app.config["PORT"] = 80
+app.config["DEBUG"] = False  # Canviat a False per producció
+app.config["PORT"] = 5000
 
 # Configuració de rutes
 DATA_DIR = Path(__file__).resolve().parent / 'data'
 ANIME_CSV = DATA_DIR / 'anime.csv'
-RATING_CSV = DATA_DIR / 'rating_balanceado.csv'
+RATING_CSV = DATA_DIR / 'cleaned_data.csv'
 
 print("="*70)
 print("🚀 INICIALITZANT SISTEMA DE RECOMANACIONS")
@@ -43,6 +44,7 @@ print(f"  - {RATING_CSV}")
 # Variable global pel sistema de recomanacions
 rec_system = None
 training_in_progress = False  # Flag per saber si s'està entrenant
+last_model_check = None  # Per al model watcher
 
 
 def initialize_system():
@@ -67,6 +69,33 @@ def initialize_system():
         traceback.print_exc()
         print("\n" + "="*70)
         return False
+
+
+def check_for_new_models():
+    """
+    Comprova si hi ha models nous disponibles i els carrega automàticament
+    S'executa cada 30 segons per detectar models entrenats manualment
+    """
+    global rec_system, last_model_check
+    
+    if rec_system is None or training_in_progress:
+        return
+    
+    try:
+        latest_version = rec_system._get_latest_version()
+        
+        if latest_version > rec_system.current_model_version:
+            print(f"\n🔔 NOU MODEL DETECTAT: v{latest_version}")
+            print(f"   Model actual: v{rec_system.current_model_version}")
+            print(f"   Recarregant automàticament...")
+            
+            if rec_system.reload_model():
+                print(f"✅ Model v{latest_version} carregat amb èxit!")
+                last_model_check = time.time()
+            else:
+                print(f"⚠️  No s'ha pogut carregar el model v{latest_version}")
+    except Exception as e:
+        pass  # Silenciosament ignorar errors en el watcher
 
 
 def check_and_retrain():
@@ -141,18 +170,30 @@ def train_model_background():
 
 def setup_scheduler():
     """
-    Configura el scheduler per executar check_and_retrain cada dia a les 2:30 AM
+    Configura el scheduler per:
+    1. Executar check_and_retrain cada dia a les 2:30 AM
+    2. Comprovar nous models cada 30 segons
     """
     scheduler = BackgroundScheduler()
     
-    # Trigger: cada dia a les 2:30 AM
-    trigger = CronTrigger(hour=2, minute=30)
+    # Trigger 1: Comprovació diària a les 2:30 AM
+    trigger_daily = CronTrigger(hour=2, minute=30)
     
     scheduler.add_job(
         func=check_and_retrain,
-        trigger=trigger,
+        trigger=trigger_daily,
         id='daily_model_check',
         name='Comprovació diària del model',
+        replace_existing=True
+    )
+    
+    # Trigger 2: Comprovar nous models cada 30 segons (per detectar entrenaments manuals)
+    scheduler.add_job(
+        func=check_for_new_models,
+        trigger='interval',
+        seconds=30,
+        id='model_watcher',
+        name='Vigilant de models nous',
         replace_existing=True
     )
     
@@ -160,8 +201,8 @@ def setup_scheduler():
     
     print("\n⏰ SCHEDULER CONFIGURAT")
     print(f"   📅 Comprovació automàtica: cada dia a les 2:30 AM")
-    print(f"   🔍 Detectarà canvis en {ANIME_CSV} i {RATING_CSV}")
-    print(f"   🤖 Entrenarà automàticament si detecta canvis")
+    print(f"   🔍 Vigilant de models: cada 30 segons")
+    print(f"   🤖 Recarregarà automàticament models nous")
     
     return scheduler
 
@@ -223,14 +264,31 @@ def get_recommendations():
     try:
         data = request.get_json()
         anime_name = data.get('anime')
-        rating = data.get('rating')
+        rating = data.get('rating', 5)  # Default 5 si no s'especifica
         
         if not anime_name:
             return jsonify({
                 "error": "El paràmetre 'anime' és obligatori"
             }), 400
         
-        recommendations = rec_system.get_recommendations(
+        # Cercar animes coincidents
+        matching_animes = rec_system.search_anime_exact(anime_name)
+        
+        # Si hi ha múltiples coincidències, retornar-les per escollir
+        if len(matching_animes) > 1:
+            return jsonify({
+                "status": "multiple_matches",
+                "message": f"S'han trobat {len(matching_animes)} animes amb aquest nom",
+                "matches": matching_animes[:10],  # Màxim 10 resultats
+                "query": anime_name
+            }), 300  # HTTP 300 Multiple Choices
+        
+        # Si només hi ha una coincidència o cap
+        if len(matching_animes) == 1:
+            anime_name = matching_animes[0]['name']
+        
+        # Obtenir recomanacions ajustades segons la valoració
+        recommendations = rec_system.get_recommendations_adjusted(
             anime_name=anime_name,
             user_rating=rating,
             num_recommendations=6
@@ -395,16 +453,20 @@ if __name__ == '__main__':
         # Configurar scheduler automàtic
         scheduler = setup_scheduler()
         
-        print(f"\n🌐 Accedeix a: http://localhost:5000")
-        print("="*70 + "\n")
-        
         try:
-            # Host must be a hostname or IP (no URL scheme). Using a full URL like
-            # 'https://recomandor.hermes.cat' causes getaddrinfo failures.
-            host = os.environ.get('APP_HOST') or os.environ.get('HOST') or '0.0.0.0'
-            port = int(os.environ.get('APP_PORT') or os.environ.get('PORT') or 5000)
-            print(f"Iniciant app: host={host} port={port}")
-            app.run(debug=True, host=host, port=port, use_reloader=False)
+            # El host ha de ser '0.0.0.0' per acceptar connexions externes
+            # NO pot ser una URL com 'https://recomanador.hermes.cat'
+            host = '0.0.0.0'  # Això permet accés des de qualsevol IP
+            port = int(os.environ.get('PORT', 5000))
+            
+            print(f"\n🌐 Servidor iniciat!")
+            print(f"  - Local: http://localhost:{port}")
+            print(f"  - Xarxa: http://0.0.0.0:{port}")
+            print(f"  - Producció: https://recomanador.hermes.cat")
+            print("="*70 + "\n")
+            
+            app.run(debug=False, host=host, port=port, use_reloader=False)
+            
         except (KeyboardInterrupt, SystemExit):
             # Aturar el scheduler quan es tanca l'app
             scheduler.shutdown()

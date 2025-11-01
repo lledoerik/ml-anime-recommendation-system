@@ -71,8 +71,11 @@ const animeGrid = document.getElementById('animeGrid');
 const loadingIndicator = document.getElementById('loadingIndicator');
 const resultsCount = document.getElementById('resultsCount');
 
-// URL de la API
-const API_URL = '/api';
+// URL de la API - dinàmica segons l'entorn
+const API_URL = window.location.origin;  // Utilitza el mateix domini
+
+// Emmagatzemar l'última cerca per si cal triar entre múltiples
+let lastSearch = null;
 
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -84,6 +87,9 @@ form.addEventListener('submit', async (e) => {
         alert('Si us plau, selecciona una valoració!');
         return;
     }
+
+    // Guardar cerca
+    lastSearch = { anime: animeName, rating: rating };
 
     // Mostrar secció de resultats i loading
     resultsSection.classList.remove('hidden');
@@ -105,6 +111,14 @@ form.addEventListener('submit', async (e) => {
                 rating: rating
             })
         });
+
+        if (response.status === 300) {
+            // Múltiples coincidències - mostrar selector
+            const data = await response.json();
+            showAnimeSelector(data.matches, data.query);
+            loadingIndicator.classList.add('hidden');
+            return;
+        }
 
         if (!response.ok) {
             const errorData = await response.json();
@@ -132,6 +146,78 @@ form.addEventListener('submit', async (e) => {
     }
 });
 
+function showAnimeSelector(matches, query) {
+    /**
+     * Mostra un selector quan hi ha múltiples coincidències
+     */
+    animeGrid.innerHTML = '';
+    
+    const selectorDiv = document.createElement('div');
+    selectorDiv.className = 'anime-selector';
+    selectorDiv.innerHTML = `
+        <h3>S'han trobat ${matches.length} animes amb "${query}"</h3>
+        <p>Selecciona l'anime correcte:</p>
+        <div class="anime-options">
+            ${matches.map((match, index) => `
+                <button class="anime-option" data-anime="${escapeHtml(match.name)}" data-index="${index}">
+                    <div class="option-title">${escapeHtml(match.name)}</div>
+                    ${match.genre ? `<div class="option-genre">Gènere: ${escapeHtml(match.genre)}</div>` : ''}
+                </button>
+            `).join('')}
+        </div>
+    `;
+    
+    animeGrid.appendChild(selectorDiv);
+    
+    // Afegir event listeners als botons
+    document.querySelectorAll('.anime-option').forEach(button => {
+        button.addEventListener('click', async () => {
+            const selectedAnime = button.dataset.anime;
+            
+            // Tornar a fer la cerca amb l'anime específic
+            loadingIndicator.classList.remove('hidden');
+            animeGrid.innerHTML = '';
+            
+            try {
+                const response = await fetch(`${API_URL}/api/recommendations`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        anime: selectedAnime,
+                        rating: lastSearch.rating
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Error en obtenir recomanacions');
+                }
+                
+                const data = await response.json();
+                displayResults(data.recommendations, selectedAnime, lastSearch.rating);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                loadingIndicator.classList.add('hidden');
+                animeGrid.innerHTML = `<div class="error-message">Error en obtenir les recomanacions.</div>`;
+            }
+        });
+    });
+}
+
+function escapeHtml(unsafe) {
+    /**
+     * Escapa caràcters HTML per evitar XSS
+     */
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 function displayResults(recommendations, animeName, rating) {
     loadingIndicator.classList.add('hidden');
     animeGrid.innerHTML = '';
@@ -141,7 +227,17 @@ function displayResults(recommendations, animeName, rating) {
         return;
     }
 
-    resultsCount.textContent = `${recommendations.length} animes recomanats basats en "${animeName}" (valoració: ${rating}/5)`;
+    // Missatge diferent segons la valoració
+    let message = '';
+    if (rating >= 4) {
+        message = `${recommendations.length} animes similars a "${animeName}" (t'ha agradat: ${rating}/5)`;
+    } else if (rating <= 2) {
+        message = `${recommendations.length} alternatives diferents a "${animeName}" (no t'ha agradat: ${rating}/5)`;
+    } else {
+        message = `${recommendations.length} animes recomanats basats en "${animeName}" (valoració neutral: ${rating}/5)`;
+    }
+    
+    resultsCount.textContent = message;
 
     recommendations.forEach(anime => {
         const card = createAnimeCard(anime);
@@ -154,7 +250,7 @@ function createAnimeCard(anime) {
     card.className = 'anime-card';
 
     // Calcular color de correlació
-    const correlationPercent = anime.correlation * 100;
+    const correlationPercent = Math.abs(anime.correlation) * 100;
     let correlationColor = '#10b981'; // verd
     if (correlationPercent < 50) {
         correlationColor = '#ef4444'; // vermell
@@ -162,17 +258,23 @@ function createAnimeCard(anime) {
         correlationColor = '#f59e0b'; // taronja
     }
 
+    // Text de similitud segons correlació
+    let similarityText = 'Similitud';
+    if (anime.correlation < 0) {
+        similarityText = 'Diferència';
+    }
+
     card.innerHTML = `
-        <div class="anime-title">${anime.title}</div>
+        <div class="anime-title">${escapeHtml(anime.title)}</div>
         <div class="anime-info">
             <div class="anime-score">
                 ★ ${anime.score}
             </div>
-            ${anime.genre ? `<div>Gènere: ${anime.genre}</div>` : ''}
+            ${anime.genre ? `<div>Gènere: ${escapeHtml(anime.genre)}</div>` : ''}
             ${anime.year ? `<div>Any: ${anime.year}</div>` : ''}
             ${anime.correlation !== undefined ? 
                 `<div style="color: ${correlationColor}; font-weight: 600;">
-                    Similitud: ${(anime.correlation * 100).toFixed(0)}%
+                    ${similarityText}: ${(Math.abs(anime.correlation) * 100).toFixed(0)}%
                 </div>` : ''}
         </div>
     `;

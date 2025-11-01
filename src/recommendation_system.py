@@ -25,6 +25,8 @@ class RecommendationSystem:
         self.userRatings_pivot = None
         self.corrMatrix = None
         self.animeStats = None
+        self.animePopularity = None  # Nova: per guardar popularitat
+        self.animeAvgRating = None   # Nova: per guardar rating mitjà
         self.model_dir = Path(__file__).resolve().parent.parent / model_dir
         self.anime_csv_path = Path(anime_csv_path)
         self.rating_csv_path = Path(rating_csv_path)
@@ -131,6 +133,14 @@ class RecommendationSystem:
             self.corrMatrix = model_data['corrMatrix']
             self.animeStats = model_data['animeStats']
             
+            # Carregar estadístiques addicionals si existeixen
+            self.animePopularity = model_data.get('animePopularity')
+            self.animeAvgRating = model_data.get('animeAvgRating')
+            
+            # Si no existeixen, calcular-les
+            if self.animePopularity is None:
+                self._calculate_anime_stats()
+            
             # Guardar info del model
             self.current_model_version = latest_version
             self.model_load_time = datetime.now()
@@ -146,6 +156,17 @@ class RecommendationSystem:
         except Exception as e:
             print(f"❌ Error carregant el model: {str(e)}")
             return False
+    
+    def _calculate_anime_stats(self):
+        """
+        Calcula estadístiques addicionals dels animes
+        """
+        if self.ratings_df is not None:
+            # Popularitat (nombre de valoracions)
+            self.animePopularity = self.ratings_df.groupby('name')['rating'].count()
+            
+            # Rating mitjà
+            self.animeAvgRating = self.ratings_df.groupby('name')['rating'].mean()
     
     def reload_model(self):
         """
@@ -190,6 +211,8 @@ class RecommendationSystem:
                 'userRatings_pivot': self.userRatings_pivot,
                 'corrMatrix': self.corrMatrix,
                 'animeStats': self.animeStats,
+                'animePopularity': self.animePopularity,
+                'animeAvgRating': self.animeAvgRating,
                 'version': next_version,
                 'anime_csv_path': str(self.anime_csv_path),
                 'rating_csv_path': str(self.rating_csv_path),
@@ -223,12 +246,23 @@ class RecommendationSystem:
         """
         print("\n📂 Carregant dades dels CSV...")
         
-        # Llegir anime.csv
+        # Llegir anime.csv amb encoding UTF-8
         a_cols = ['anime_id', 'name', 'genre', 'members']
-        animes_df = pd.read_csv(anime_csv_path, sep=',', usecols=a_cols, encoding="ISO-8859-1")
+        animes_df = pd.read_csv(
+            anime_csv_path, 
+            sep=',', 
+            usecols=a_cols, 
+            encoding="utf-8",  # Canviat a UTF-8
+            on_bad_lines='skip'  # Saltar línies problemàtiques
+        )
         
-        # Llegir rating CSV
-        ratings_df = pd.read_csv(rating_csv_path, sep=',', encoding="ISO-8859-1")
+        # Llegir rating CSV amb encoding UTF-8
+        ratings_df = pd.read_csv(
+            rating_csv_path, 
+            sep=',', 
+            encoding="utf-8",  # Canviat a UTF-8
+            on_bad_lines='skip'
+        )
         
         # Merge de les dades
         self.ratings_df = pd.merge(animes_df, ratings_df)
@@ -268,14 +302,18 @@ class RecommendationSystem:
         )
         print(f"   ✓ Pivot table creada: {self.userRatings_pivot.shape}")
         
-        # Calcular matriu de correlacions
+        # Calcular matriu de correlacions amb un mínim de 50 en lloc de 100
         print(f"\n🔗 Calculant matriu de correlacions...")
-        self.corrMatrix = self.userRatings_pivot.corr(method='pearson', min_periods=100)
+        self.corrMatrix = self.userRatings_pivot.corr(method='pearson', min_periods=50)  # Baixat a 50
         print(f"   ✓ Matriu de correlacions calculada: {self.corrMatrix.shape}")
         
         # Calcular estadístiques
         print(f"\n📈 Calculant estadístiques...")
         self.animeStats = self.ratings_df.groupby('name').agg({'rating': np.size})
+        
+        # Calcular popularitat i rating mitjà
+        self._calculate_anime_stats()
+        
         print(f"   ✓ Estadístiques calculades")
         
         print(f"\n✅ Totes les dades processades correctament!")
@@ -296,42 +334,117 @@ class RecommendationSystem:
             'data_changed': self.has_data_changed()
         }
     
-    def get_recommendations(self, anime_name, user_rating=None, num_recommendations=6):
+    def search_anime_exact(self, query):
         """
-        Obté recomanacions basades en un anime concret
+        Cerca animes que coincideixin exactament o parcialment amb la query
+        
+        Returns:
+            list: Llista d'animes que coincideixen
         """
+        query_lower = query.lower()
+        matches = []
+        
+        for anime_name in self.userRatings_pivot.columns:
+            anime_name_lower = anime_name.lower()
+            
+            # Coincidència exacta
+            if anime_name_lower == query_lower:
+                return [{'name': anime_name, 'match_type': 'exact'}]
+            
+            # Coincidència parcial
+            if query_lower in anime_name_lower:
+                anime_info = self.ratings_df[self.ratings_df['name'] == anime_name].iloc[0]
+                matches.append({
+                    'name': anime_name,
+                    'genre': str(anime_info.get('genre', 'Unknown')),
+                    'match_type': 'partial'
+                })
+        
+        return matches
+    
+    def get_recommendations_adjusted(self, anime_name, user_rating=5, num_recommendations=6):
+        """
+        Obté recomanacions ajustades segons la valoració de l'usuari
+        
+        - Si rating >= 4: Retorna animes similars
+        - Si rating <= 2: Retorna animes diferents (correlació negativa o baixa)
+        - Si rating = 3: Retorna animes moderadament similars
+        """
+        
+        # Verificar que l'anime existeix
         if anime_name not in self.userRatings_pivot.columns:
             matching = [col for col in self.userRatings_pivot.columns if anime_name.lower() in col.lower()]
             if not matching:
                 return None
             anime_name = matching[0]
         
+        # Obtenir correlacions
         anime_ratings = self.userRatings_pivot[anime_name]
         similar_animes = self.userRatings_pivot.corrwith(anime_ratings)
         similar_animes = similar_animes.dropna()
         
+        # Crear DataFrame amb correlacions
         df = pd.DataFrame(similar_animes, columns=['similarity'])
-        popular_animes = self.animeStats['rating'] >= 100
+        
+        # Filtrar per popularitat (mínim 50 valoracions)
+        popular_animes = self.animeStats['rating'] >= 50  # Baixat a 50
         df = self.animeStats[popular_animes].join(df)
         df = df.dropna()
-        df = df.sort_values(['similarity'], ascending=False)
+        
+        # Afegir rating mitjà i popularitat
+        if self.animeAvgRating is not None:
+            df = df.join(self.animeAvgRating.rename('avg_rating'))
+        if self.animePopularity is not None:
+            df = df.join(self.animePopularity.rename('popularity'))
+        
+        # Eliminar l'anime actual dels resultats
         df = df[df.index != anime_name]
         
+        # AJUSTAR SEGONS LA VALORACIÓ DE L'USUARI
+        if user_rating >= 4:
+            # Li agrada: retornar els més similars amb bon rating
+            df['score'] = df['similarity'] * 0.7 + (df.get('avg_rating', 7) / 10) * 0.3
+            df = df.sort_values('score', ascending=False)
+            
+        elif user_rating <= 2:
+            # No li agrada: retornar animes diferents (correlació baixa o negativa) però populars
+            # Prioritzar animes amb correlació baixa però bon rating mitjà
+            df['difference_score'] = (1 - abs(df['similarity'])) * 0.5 + (df.get('avg_rating', 7) / 10) * 0.5
+            df = df[df['similarity'] < 0.3]  # Només animes poc correlacionats
+            df = df.sort_values('difference_score', ascending=False)
+            
+        else:  # rating = 3
+            # Neutral: animes moderadament similars
+            df = df[(df['similarity'] > 0.2) & (df['similarity'] < 0.6)]
+            df['score'] = df['similarity'] * 0.5 + (df.get('avg_rating', 7) / 10) * 0.5
+            df = df.sort_values('score', ascending=False)
+        
+        # Obtenir top recomanacions
         top_recommendations = df.head(num_recommendations)
         
         recommendations = []
         for anime_name_rec in top_recommendations.index:
             anime_info = self.ratings_df[self.ratings_df['name'] == anime_name_rec].iloc[0]
             
+            # Obtenir correlació i score
+            correlation = top_recommendations.loc[anime_name_rec, 'similarity']
+            avg_rating = top_recommendations.loc[anime_name_rec].get('avg_rating', anime_info.get('rating', 0))
+            
             recommendations.append({
                 "title": str(anime_name_rec),
-                "score": float(round(anime_info.get('rating', 0), 1)) if pd.notna(anime_info.get('rating', 0)) else 0.0,
+                "score": float(round(avg_rating, 1)) if pd.notna(avg_rating) else 0.0,
                 "genre": str(anime_info.get('genre', 'Unknown')),
                 "year": None,
-                "correlation": float(round(top_recommendations.loc[anime_name_rec, 'similarity'], 2))
+                "correlation": float(round(correlation, 2)) if pd.notna(correlation) else 0.0
             })
         
         return recommendations
+    
+    def get_recommendations(self, anime_name, user_rating=None, num_recommendations=6):
+        """
+        Versió legacy per compatibilitat - redirigeix a get_recommendations_adjusted
+        """
+        return self.get_recommendations_adjusted(anime_name, user_rating or 5, num_recommendations)
     
     def get_recommendations_for_user(self, user_ratings_dict, num_recommendations=10):
         """
@@ -348,12 +461,24 @@ class RecommendationSystem:
                 anime_name = matching[0]
             
             sims = self.corrMatrix[anime_name].dropna()
-            sims = sims.map(lambda x: x * rating)
+            
+            # Ajustar segons la valoració
+            if rating >= 4:
+                # Li agrada: mantenir correlacions positives
+                sims = sims.map(lambda x: x * rating)
+            elif rating <= 2:
+                # No li agrada: invertir correlacions
+                sims = sims.map(lambda x: -x * (6 - rating))
+            else:
+                # Neutral: ponderar menys
+                sims = sims.map(lambda x: x * rating * 0.5)
+            
             simCandidates = pd.concat([simCandidates, sims])
         
         simCandidates = simCandidates.groupby(simCandidates.index).sum()
         simCandidates = simCandidates.sort_values(ascending=False)
         
+        # Eliminar animes ja valorats
         for anime_name in user_ratings_dict.keys():
             if anime_name in simCandidates.index:
                 simCandidates = simCandidates.drop(anime_name)

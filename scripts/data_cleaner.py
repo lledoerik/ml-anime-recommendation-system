@@ -208,9 +208,9 @@ if __name__ == "__main__":
         if choice == '1':
             preprocess_ratings()
         elif choice == '2':
-            analyze_dataset('rating.csv')
+            analyze_dataset(RATING_CSV)
         elif choice == '3':
-            analyze_dataset('cleaned_data.csv')
+            analyze_dataset(CLEANED_DATA_CSV)
         elif choice == '4':
             print("Sortint...")
         else:

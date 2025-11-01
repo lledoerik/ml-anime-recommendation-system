@@ -1,19 +1,36 @@
-# 🎬 Sistema de Recomanacions d'Animes
+# 🎬 Sistema de Recomanacions d'Animes v2.0
 
-Sistema intel·ligent de recomanacions basat en collaborative filtering amb correlació de Pearson. Inclou entrenament automàtic del model cada dia a les 2:30 AM.
+Sistema intel·ligent de recomanacions basat en collaborative filtering amb correlació de Pearson. Ara amb suport per valoracions negatives, selecció múltiple d'animes, i reload automàtic de models!
+
+## 🚀 Novetats v2.0
+
+### ✨ Noves Funcionalitats
+
+✅ **Recomanacions ajustades segons valoració:**
+   - ⭐ **Alta (4-5)**: Troba animes similars
+   - 😐 **Mitjana (3)**: Animes moderadament relacionats  
+   - 👎 **Baixa (1-2)**: Descobreix alternatives diferents
+
+✅ **Selector múltiple d'animes:** Quan hi ha diversos animes amb el mateix nom, pots triar el correcte
+
+✅ **Reload automàtic de models:** Detecta i carrega models nous cada 30 segons sense reiniciar
+
+✅ **Millor suport UTF-8:** Mostra correctament noms japonesos i caràcters especials
+
+✅ **API compatible amb producció:** Funciona tant en localhost com a recomanador.hermes.cat
 
 ## 📋 Característiques
 
-✅ **Recomanacions intel·ligents** basades en correlació de Pearson
-✅ **Entrenament automàtic** del model cada dia a les 2:30 AM
-✅ **Sistema de versionat** de models (v1, v2, v3...)
-✅ **Footer informatiu** amb versió del model en temps real
-✅ **Càrrega ràpida** (2-3 segons vs 20 minuts!)
-✅ **Entrenament en background** sense bloquejar l'aplicació
-✅ **API REST** completa amb Flask
-✅ **Interfície web** moderna i responsive
+- **Recomanacions intel·ligents** amb correlació de Pearson ajustada
+- **Entrenament automàtic** cada dia a les 2:30 AM
+- **Sistema de versionat** de models (v1, v2, v3...)
+- **Footer informatiu** amb versió del model en temps real
+- **Càrrega ràpida** (2-3 segons vs 20 minuts!)
+- **Entrenament en background** sense bloquejar
+- **API REST** completa amb Flask
+- **Interfície web** moderna i responsive
 
-## 🚀 Instal·lació
+## 🔧 Instal·lació
 
 ### 1. Requisits
 ```bash
@@ -22,264 +39,181 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 2. Estructura de Directoris
-```
-ml-anime-recommendation-system/
-├── README.md
-├── requirements.txt
-├── .gitignore
-├── app.py                        # Punt d'entrada de l'aplicació
-│
-├── data/                         # Datasets
-│   ├── anime.csv
-│   └── rating_balanceado.csv
-│
-├── model/                        # Models entrenats (PKL)
-│   ├── corr_matrix_v1.pkl
-│   ├── corr_matrix_v2.pkl
-│   └── ...
-│
-├── src/                          # Codi font principal
-│   ├── __init__.py
-│   ├── models/                   # Classes de dades
-│   │   ├── __init__.py
-│   │   ├── anime.py
-│   │   └── user.py
-│   └── recommendation_system.py  # Motor de recomanacions
-│
-├── scripts/                      # Scripts d'utilitat
-│   ├── train_model.py            # Entrenar model
-│   ├── train_auto.sh             # Script bash simplificat
-│   └── data_cleaner.py           # Netejar dades
-│
-├── static/                       # Frontend
-│   ├── css/
-│   │   └── style.css
-│   └── js/
-│       └── script.js
-│
-└── templates/                    # HTML templates
-    └── index.html
-```
-
-## 🔄 Flux de Treball
-
-### Pas 1: Netejar les Dades (Opcional)
-Si tens el fitxer `rating.csv` original:
+### 2. Entrenar el Model (OBLIGATORI la primera vegada)
 ```bash
-python scripts/data_cleaner.py
-```
-
-### Pas 2: Entrenar el Model ⚠️ OBLIGATORI LA PRIMERA VEGADA
-```bash
-# Opció 1: Script Python
 python scripts/train_model.py
-
-# Opció 2: Script bash simplificat
-./scripts/train_auto.sh
-```
-
-**Output:**
-```
-📦 Model v1 guardat a: model/corr_matrix_v1.pkl
-   Mida del fitxer: 45.3 MB
 ```
 
 ⏱️ **Temps estimat:** 5-10 minuts segons la mida del dataset
 
-### Pas 3: Executar l'Aplicació
+### 3. Executar l'Aplicació
 ```bash
 python app.py
 ```
 
-Accedeix a: `http://localhost:5000`
+Accedeix a:
+- Local: `http://localhost:5000`
+- Producció: `https://recomanador.hermes.cat`
 
-## 🤖 Entrenament Automàtic
+## 🤖 Com Funciona el Sistema
 
-L'aplicació **comprova automàticament** cada dia a les **2:30 AM** si les dades han canviat.
+### Sistema de Valoracions
 
-**Funcionament:**
-1. 🕐 A les 2:30 AM, l'scheduler es desperta
-2. 🔍 Comprova si `anime.csv` o `rating_balanceado.csv` han canviat
-3. 🚫 Si no han canviat → No fa res
-4. ✅ Si han canviat → Entrena un model nou en **background**
-5. 🔄 Quan acaba, **recarrega automàticament** el model nou
-6. 👥 Els usuaris **no noten res** - segueixen usant el model anterior durant l'entrenament
+El sistema ara interpreta les valoracions de manera intel·ligent:
 
-**Avantatges:**
-- ✅ **Zero downtime:** L'app no es para mai
-- ✅ **Transparent:** Els usuaris no ho noten
-- ✅ **Automàtic:** No cal intervenció manual
-- ✅ **Versionat:** Es guarda cada versió (v1, v2, v3...)
+| Valoració | Comportament | Exemple |
+|-----------|--------------|---------|
+| ⭐⭐⭐⭐⭐ (4-5) | Cerca animes similars | Si t'agrada "Death Note", et recomana thrillers psicològics |
+| ⭐⭐⭐ (3) | Cerca animes moderats | Recomanacions neutrals, ni molt similars ni molt diferents |
+| ⭐⭐ (1-2) | Cerca alternatives | Si no t'agrada "One Piece", et recomana animes curts o d'altres gèneres |
+
+### Reload Automàtic de Models
+
+L'aplicació comprova cada **30 segons** si hi ha models nous:
+- Si entrenes manualment amb `train_model.py`, es detecta automàticament
+- No cal reiniciar l'API
+- Els usuaris no noten cap interrupció
+
+### Múltiples Coincidències
+
+Si cerques "Detective Conan" i hi ha diversos resultats:
+1. El sistema mostra tots els animes coincidents
+2. Pots seleccionar l'anime exacte que vols
+3. Les recomanacions es basen en la teva selecció específica
 
 ## 🌐 API Endpoints
 
-### 1. Obtenir Recomanacions
+### Recomanacions Principals
 ```bash
 POST /api/recommendations
 {
   "anime": "Death Note",
   "rating": 4.5
 }
-```
 
-### 2. Recomanacions Múltiples
-```bash
-POST /api/recommendations-multiple
+# Resposta amb múltiples coincidències (HTTP 300):
 {
-  "ratings": {
-    "Death Note": 5,
-    "Code Geass": 4.5
-  }
+  "status": "multiple_matches",
+  "matches": [
+    {"name": "Death Note", "genre": "Thriller"},
+    {"name": "Death Note: Rewrite", "genre": "Recap"}
+  ]
 }
 ```
 
-### 3. Informació del Model ⭐ NOU
+### Informació del Model
 ```bash
 GET /api/model-info
 
-Response:
 {
   "version": 3,
-  "loaded_at": "2024-10-28T12:30:45",
+  "loaded_at": "2025-10-31T12:30:45",
   "num_animes": 12294,
   "num_users": 73516,
-  "num_ratings": 2156789,
-  "data_changed": false,
   "training_in_progress": false
 }
 ```
 
-### 4. Altres Endpoints
-```bash
-GET  /api/animes              # Llistar tots els animes
-GET  /api/search?q=death      # Cercar animes
-GET  /api/models              # Llistar models disponibles
-POST /api/train               # Forçar entrenament manual
-```
-
-## 📊 Footer amb Informació del Model
-
-El footer mostra en temps real:
-- 📦 **Versió del model** actual (v1, v2, v3...)
-- 🎬 **Nombre d'animes** en el model
-- 👥 **Nombre d'usuaris** en el model
-- 📅 **Data de càrrega** del model
-- 🔄 **Indicador d'entrenament** si s'està entrenant
-
-**El footer s'actualitza automàticament cada 30 segons!**
-
-## ⚙️ Com Funciona el Sistema
-
-### 1. Càrrega Ràpida
-```python
-# En lloc de calcular cada vegada (20 minuts):
-corrMatrix = userRatings_pivot.corr(...)  # ❌ Lent
-
-# Carreguem del PKL (2-3 segons):
-model_data = pickle.load('model/corr_matrix_v3.pkl')  # ✅ Ràpid
-```
-
-### 2. Versionat Automàtic
-```
-Primera vegada: corr_matrix_v1.pkl
-Segona vegada:  corr_matrix_v2.pkl
-Tercera vegada: corr_matrix_v3.pkl
-...
-```
-
-L'app **sempre carrega l'última versió** automàticament.
-
-### 3. Scheduler Automàtic
-```python
-# APScheduler executa check_and_retrain() cada dia a les 2:30 AM
-scheduler.add_job(
-    func=check_and_retrain,
-    trigger=CronTrigger(hour=2, minute=30),
-    id='daily_model_check'
-)
-```
-
-### 4. Entrenament en Background
-```python
-# Threading per no bloquejar l'app
-training_thread = threading.Thread(target=train_model_background)
-training_thread.daemon = True
-training_thread.start()
-
-# Els usuaris segueixen usant model v3
-# Mentre en background s'entrena v4
-# Quan v4 està llest → switch automàtic
-```
-
 ## 🛠️ Resolució de Problemes
 
-### Error: "No s'ha trobat cap model entrenat"
-```bash
-python scripts/train_model.py
-```
+### Les recomanacions no semblen bones
 
-### L'app triga molt a carregar
-Això vol dir que no tens cap model entrenat!
-```bash
-python scripts/train_model.py
-```
+**Possibles causes:**
+1. **Dataset massa petit**: El fitxer `rating_balanceado.csv` té massa filtres
+2. **Pocs usuaris en comú**: Baixa el `min_periods` a la correlació (ara està a 50)
 
-### Vull esborrar models antics
-```bash
-rm model/corr_matrix_v1.pkl
-rm model/corr_matrix_v2.pkl
-# Mantén només la versió més recent
-```
-
-### Canviar l'hora de l'entrenament automàtic
-Edita `app.py`:
+**Solució:**
 ```python
-# Canvia aquesta línia:
-trigger = CronTrigger(hour=2, minute=30)
-
-# Per exemple, per executar-lo a les 3:45 AM:
-trigger = CronTrigger(hour=3, minute=45)
+# A recommendation_system.py, canvia:
+self.corrMatrix = self.userRatings_pivot.corr(method='pearson', min_periods=30)  # Baixar més
 ```
 
-## 💡 Conceptes Clau
+### Caràcters japonesos no es veuen bé
 
-### Threading vs Multiprocessing
-**Threading (el que usem):**
-- Múltiples tasques en el mateix procés
-- Comparteixen memòria
-- Més lleuger
-- Ideal per I/O (com entrenar models)
+**Solució implementada:**
+- Tots els CSV es llegeixen amb `encoding='utf-8'`
+- HTML té `<meta charset="UTF-8">`
+- CSS inclou fonts japoneses
 
-**Multiprocessing:**
-- Múltiples processos independents
-- Memòria separada
-- Més pesant
-- Ideal per CPU-intensive tasks
-
-### Scheduler (APScheduler)
-Permet executar funcions en moments específics:
-- `CronTrigger(hour=2, minute=30)` → Cada dia a les 2:30 AM
-- `IntervalTrigger(hours=24)` → Cada 24 hores des de l'última execució
-
-### Pickle
-Serialitza objectes de Python a fitxers binaris:
-```python
-# Guardar
-pickle.dump(model_data, file)
-
-# Carregar
-model_data = pickle.load(file)
+Si encara tens problemes, converteix els CSV:
+```bash
+iconv -f ISO-8859-1 -t UTF-8 data/anime.csv > data/anime_utf8.csv
+mv data/anime_utf8.csv data/anime.csv
 ```
 
-## 📝 Crèdits
+### Error de connexió a l'API
 
-Projecte acadèmic de sistema de recomanacions d'animes amb:
-- Flask (API REST)
-- Pandas + NumPy (Data processing)
-- APScheduler (Tasques automàtiques)
-- Collaborative Filtering (Pearson correlation)
+**Per producció:**
+- L'app SEMPRE ha d'executar-se amb `host='0.0.0.0'`
+- El domini `recomanador.hermes.cat` ha d'apuntar al servidor
+- El JavaScript utilitza `window.location.origin` per trobar l'API
+
+### L'entrenament automàtic no funciona
+
+Verifica que:
+1. El scheduler està actiu (mira els logs)
+2. Els fitxers CSV han canviat realment
+3. No hi ha un entrenament ja en curs
+
+## 📊 Millores del Model
+
+### Per millorar la qualitat de les recomanacions:
+
+1. **Augmentar el dataset:**
+   - Usa `rating.csv` original amb menys filtres
+   - O baixa els llindars a `data_cleaner.py`
+
+2. **Ajustar paràmetres:**
+   ```python
+   # Mínim d'usuaris per calcular correlació
+   min_periods=30  # Baixar per més cobertura
+   
+   # Mínim de valoracions per anime
+   popular_animes = self.animeStats['rating'] >= 30  # Baixar per més varietat
+   ```
+
+3. **Afegir més factors:**
+   - Gèneres
+   - Any de llançament
+   - Popularitat global
+
+## 💡 Consells d'Ús
+
+### Per als usuaris:
+- **Puntua alt (4-5)** animes que t'agraden per trobar similars
+- **Puntua baix (1-2)** animes que no t'agraden per descobrir alternatives
+- **Puntua neutral (3)** per explorar moderadament
+
+### Per als desenvolupadors:
+- Models nous es detecten automàticament cada 30 segons
+- L'entrenament manual no bloqueja l'API
+- Pots tenir múltiples versions de models
+
+## 📝 Arquitectura Tècnica
+
+```
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│   Frontend   │────▶│   Flask API  │────▶│Recommendation│
+│  JavaScript  │     │   (app.py)   │     │    System    │
+└──────────────┘     └──────────────┘     └──────────────┘
+                            │                      │
+                     ┌──────▼──────┐      ┌───────▼──────┐
+                     │  Scheduler  │      │ Pickle Models│
+                     │ (APScheduler)│      │  (v1,v2,v3) │
+                     └──────────────┘      └──────────────┘
+```
+
+## 🚀 Roadmap Futur
+
+- [ ] Implementar cache de recomanacions
+- [ ] Afegir filtratge per gèneres
+- [ ] Sistema de login i perfils d'usuari
+- [ ] Històric de recomanacions
+- [ ] Exportar/importar models
+- [ ] Integració amb APIs externes (MyAnimeList, etc.)
 
 ---
 
-**Made with ❤️ i molt de temps esperant que s'entreni el model 😅**
+**Desenvolupat amb ❤️ per la comunitat anime**
+
+*Versió 2.0 - Octubre 2025*

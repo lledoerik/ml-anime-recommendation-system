@@ -9,5 +9,8 @@ numpy==1.26.2
 # Scheduler per tasques automàtiques
 APScheduler==3.10.4
 
-# CORS
+# Detecció d'encoding (per fix_encoding.py)
+chardet==5.2.0
+
+# CORS i Werkzeug
 Werkzeug==3.0.1
